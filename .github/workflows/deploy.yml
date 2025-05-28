@@ -96,6 +96,8 @@ jobs:
             ssh -v -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
             
               echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
+              echo "$ECR_REPOSITORY" >> /home/ubuntu/app/test.log
+              echo "\$ECR_REPOSITORY" >> /home/ubuntu/app/test.log
             
               set +x
               export APP_YML_BASE64="\$APP_YML_BASE64"
