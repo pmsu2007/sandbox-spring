@@ -82,7 +82,8 @@ jobs:
             chmod 600 /home/ubuntu/.ssh/app_key.pem
             
             echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/deploy.log
-
+            echo "${{ secrets.ECR_REPOSITORY }}" >> /home/ubuntu/test.log
+            
             # Bastion에서도 민감정보 export 시 로그 감춤
             set +x
             export APP_YML_BASE64="${{ secrets.APP_YML_BASE64 }}"
@@ -91,7 +92,7 @@ jobs:
             export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
             set -x
             
-            ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.API_HOST }} << EOF
+            ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.API_HOST }} <<EOF
             
               echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
             
