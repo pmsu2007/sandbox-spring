@@ -90,6 +90,7 @@ jobs:
             export APP_YML_BASE64="${{ secrets.APP_YML_BASE64 }}"
             export ECR_REGISTRY="${{ secrets.ECR_REGISTRY }}"
             export ECR_REPOSITORY="${{ secrets.ECR_REPOSITORY }}"
+            export AWS_REGION="${{ secrets.AWS_REGION }}"
             export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
             set -x
             
@@ -101,8 +102,12 @@ jobs:
               export APP_YML_BASE64="$APP_YML_BASE64"
               export ECR_REGISTRY="$ECR_REGISTRY"
               export ECR_REPOSITORY="$ECR_REPOSITORY"
+              export AWS_REGION="$AWS_REGION"
               export DOCKER_IMAGE_TAG="$DOCKER_IMAGE_TAG"
               set -x
+            
+              aws ecr get-login-password --region $AWS_REGION | \
+              docker login --username AWS --password-stdin $ECR_REGISTRY
             
               mkdir -p /home/ubuntu/app/config
               cd /home/ubuntu/app
