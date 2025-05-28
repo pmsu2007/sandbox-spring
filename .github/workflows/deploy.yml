@@ -81,7 +81,7 @@ jobs:
             echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/ubuntu/.ssh/app_key.pem
             chmod 600 /home/ubuntu/.ssh/app_key.pem
             
-            echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
+            echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/deploy.log
 
             # Bastion에서도 민감정보 export 시 로그 감춤
             set +x
@@ -92,6 +92,9 @@ jobs:
             set -x
             
             ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.API_HOST }} << EOF
+            
+              echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
+            
               set +x
               export APP_YML_BASE64="\$APP_YML_BASE64"
               export ECR_REGISTRY="\$ECR_REGISTRY"
