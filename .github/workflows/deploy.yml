@@ -142,7 +142,7 @@ jobs:
           for i in {1..10}; do
             status=$(aws elbv2 describe-target-health \
               --target-group-arn $NEW_TG_ARN \
-              --query "TargetHealthDescriptions[?Target.Id=='$NEW_INSTANCE_ID'].TargetHealth.State" \
+              --query "TargetHealthDescriptions[*].{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}" \
               --output text)
             echo "Status: $status"
             if [ "$status" = "healthy" ]; then
