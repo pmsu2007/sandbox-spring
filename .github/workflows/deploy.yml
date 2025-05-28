@@ -96,20 +96,18 @@ jobs:
             ssh -v -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
             
               echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
-              echo "$ECR_REPOSITORY" >> /home/ubuntu/app/test.log
-              echo "\$ECR_REPOSITORY" >> /home/ubuntu/app/test.log
             
               set +x
-              export APP_YML_BASE64="\$APP_YML_BASE64"
-              export ECR_REGISTRY="\$ECR_REGISTRY"
-              export ECR_REPOSITORY="\$ECR_REPOSITORY"
-              export DOCKER_IMAGE_TAG="\$DOCKER_IMAGE_TAG"
+              export APP_YML_BASE64="$APP_YML_BASE64"
+              export ECR_REGISTRY="$ECR_REGISTRY"
+              export ECR_REPOSITORY="$ECR_REPOSITORY"
+              export DOCKER_IMAGE_TAG="$DOCKER_IMAGE_TAG"
               set -x
             
               mkdir -p /home/ubuntu/app/config
               cd /home/ubuntu/app
             
-              echo "\$APP_YML_BASE64" | base64 -d > config/application.yml
+              echo "$APP_YML_BASE64" | base64 -d > config/application.yml
             
               envsubst < docker-compose.template.yml > docker-compose.yml
             
