@@ -136,26 +136,43 @@ jobs:
             --target-group-arn $NEW_TG_ARN \
             --targets Id=$NEW_INSTANCE_ID,Port=8080
 
-      - name: Wait for Health Check
+      - name: Switch ALB Listener to Weighted Target Groups
         run: |
-          echo "Waiting for healthy target registration..."
+          echo "Switching listener to weighted forwarding (NEW=10%, OLD=90%)..."
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions 'Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn="'$NEW_TG_ARN'",Weight=10},{TargetGroupArn="'$OLD_TG_ARN'",Weight=90}]}'
+
+      - name: Wait for Health Check of New Target Group
+        run: |
+          echo "Waiting for healthy status of NEW target group..."
           for i in {1..10}; do
             status=$(aws elbv2 describe-target-health \
               --target-group-arn $NEW_TG_ARN \
-              --query "TargetHealthDescriptions[*].{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}" \
+              --query "TargetHealthDescriptions[*].TargetHealth.State" \
               --output text)
             echo "Status: $status"
             if [ "$status" = "healthy" ]; then
+              echo "HEALTHY=1" >> $GITHUB_ENV
               break
             fi
-            sleep 5
+            sleep 10
           done
 
-      - name: Switch ALB Listener to New Target Group
+      - name: Finalize Traffic Shift or Rollback
         run: |
-          aws elbv2 modify-listener \
-            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions Type=forward,TargetGroupArn=$NEW_TG_ARN
+          if [ "$HEALTHY" = "1" ]; then
+            echo "NEW target group is healthy. Shifting 100% traffic..."
+            aws elbv2 modify-listener \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions Type=forward,TargetGroupArn=$NEW_TG_ARN
+          else
+            echo "NEW target group is not healthy. Rolling back..."
+            aws elbv2 modify-listener \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions Type=forward,TargetGroupArn=$OLD_TG_ARN
+            exit 1
+          fi
 
       - name: Deregister Old Instance from Previous Target Group
         run: |
