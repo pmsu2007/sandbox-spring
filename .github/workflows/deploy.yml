@@ -57,6 +57,7 @@ jobs:
             --output text)
 
           if [ "$ACTIVE_TG" = "${{ secrets.TG_BLUE_ARN }}" ]; then
+            echo "NEW TG is GREEN / OLD TG is BLUE"
             echo "ACTIVE=BLUE" >> $GITHUB_ENV
             echo "API_HOST"=${{ secrets.GREEN_HOST }}>> $GITHUB_ENV
             echo "NEW_INSTANCE_ID=${{ secrets.GREEN_INSTANCE_ID }}" >> $GITHUB_ENV
@@ -64,6 +65,7 @@ jobs:
             echo "OLD_TG_ARN=${{ secrets.TG_BLUE_ARN }}" >> $GITHUB_ENV
             echo "OLD_INSTANCE_ID=${{ secrets.BLUE_INSTANCE_ID }}" >> $GITHUB_ENV
           else
+            echo "NEW TG is BLUE / OLD TG is GREEN"
             echo "ACTIVE=GREEN" >> $GITHUB_ENV
             echo "API_HOST"=${{ secrets.BLUE_HOST }}>> $GITHUB_ENV
             echo "NEW_INSTANCE_ID=${{ secrets.BLUE_INSTANCE_ID }}" >> $GITHUB_ENV
@@ -96,7 +98,7 @@ jobs:
             export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
             set -x
             
-            ssh -v -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
+            ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
             
               echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
             
@@ -132,12 +134,12 @@ jobs:
         run: |
           aws elbv2 register-targets \
             --target-group-arn $NEW_TG_ARN \
-            --targets Id=$NEW_INSTANCE_ID
+            --targets Id=$NEW_INSTANCE_ID,Port=8080
 
       - name: Wait for Health Check
         run: |
           echo "Waiting for healthy target registration..."
-          for i in {1..20}; do
+          for i in {1..10}; do
             status=$(aws elbv2 describe-target-health \
               --target-group-arn $NEW_TG_ARN \
               --query "TargetHealthDescriptions[?Target.Id=='$NEW_INSTANCE_ID'].TargetHealth.State" \
@@ -146,7 +148,7 @@ jobs:
             if [ "$status" = "healthy" ]; then
               break
             fi
-            sleep 15
+            sleep 5
           done
 
       - name: Switch ALB Listener to New Target Group
