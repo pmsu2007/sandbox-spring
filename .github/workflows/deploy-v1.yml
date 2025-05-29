@@ -1,0 +1,190 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - no
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.DOCKER_IMAGE_TAG }} .
+
+      - name: Push Docker Image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.DOCKER_IMAGE_TAG }}
+
+      - name: Get GitHub Actions IP
+        id: ip
+        uses: haythem/public-ip@v1.2
+
+      - name: Add IP to Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_BASTION_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+      - name: Determine Active Target Group
+        id: active
+        run: |
+          ACTIVE_TG=$(aws elbv2 describe-listeners \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --query "Listeners[0].DefaultActions[0].TargetGroupArn" \
+            --output text)
+
+          if [ "$ACTIVE_TG" = "${{ secrets.TG_BLUE_ARN }}" ]; then
+            echo "NEW TG is GREEN / OLD TG is BLUE"
+            echo "ACTIVE=BLUE" >> $GITHUB_ENV
+            echo "API_HOST"=${{ secrets.GREEN_HOST }}>> $GITHUB_ENV
+            echo "NEW_INSTANCE_ID=${{ secrets.GREEN_INSTANCE_ID }}" >> $GITHUB_ENV
+            echo "NEW_TG_ARN=${{ secrets.TG_GREEN_ARN }}" >> $GITHUB_ENV
+            echo "OLD_TG_ARN=${{ secrets.TG_BLUE_ARN }}" >> $GITHUB_ENV
+            echo "OLD_INSTANCE_ID=${{ secrets.BLUE_INSTANCE_ID }}" >> $GITHUB_ENV
+          else
+            echo "NEW TG is BLUE / OLD TG is GREEN"
+            echo "ACTIVE=GREEN" >> $GITHUB_ENV
+            echo "API_HOST"=${{ secrets.BLUE_HOST }}>> $GITHUB_ENV
+            echo "NEW_INSTANCE_ID=${{ secrets.BLUE_INSTANCE_ID }}" >> $GITHUB_ENV
+            echo "NEW_TG_ARN=${{ secrets.TG_BLUE_ARN }}" >> $GITHUB_ENV
+            echo "OLD_TG_ARN=${{ secrets.TG_GREEN_ARN }}" >> $GITHUB_ENV
+            echo "OLD_INSTANCE_ID=${{ secrets.GREEN_INSTANCE_ID }}" >> $GITHUB_ENV
+          fi
+
+      - name: Deploy via Bastion
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.BASTION_HOST }}
+          username: ${{ secrets.BASTION_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/ubuntu/.ssh/app_key.pem
+            chmod 600 /home/ubuntu/.ssh/app_key.pem
+            
+            echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/deploy.log
+            
+            # Bastion에서도 민감정보 export 시 로그 감춤
+            set +x
+            export APP_YML_BASE64="${{ secrets.APP_YML_BASE64 }}"
+            export ECR_REGISTRY="${{ secrets.ECR_REGISTRY }}"
+            export ECR_REPOSITORY="${{ secrets.ECR_REPOSITORY }}"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_KEY }}"
+            export AWS_REGION="${{ secrets.AWS_REGION }}"
+            export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
+            set -x
+            
+            ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
+            
+              echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
+            
+              set +x
+              export APP_YML_BASE64="$APP_YML_BASE64"
+              export ECR_REGISTRY="$ECR_REGISTRY"
+              export ECR_REPOSITORY="$ECR_REPOSITORY"
+              export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+              export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+              export AWS_REGION="$AWS_REGION"
+              export DOCKER_IMAGE_TAG="$DOCKER_IMAGE_TAG"
+              set -x
+            
+              aws ecr get-login-password --region $AWS_REGION | \
+              docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+              mkdir -p /home/ubuntu/app/config
+              cd /home/ubuntu/app
+            
+              echo "$APP_YML_BASE64" | base64 -d > config/application.yml
+            
+              envsubst < docker-compose.template.yml > docker-compose.yml
+            
+              docker compose pull app || true
+              docker compose stop app || true
+              docker compose rm -f app || true
+              docker compose up -d --force-recreate app || exit 1
+            EOF
+          
+            rm -f /home/ubuntu/.ssh/app_key.pem
+
+      - name: Register Target to Target Group
+        run: |
+          aws elbv2 register-targets \
+            --target-group-arn $NEW_TG_ARN \
+            --targets Id=$NEW_INSTANCE_ID,Port=8080
+
+      - name: Switch ALB Listener to Weighted Target Groups
+        run: |
+          echo "Switching listener to weighted forwarding (NEW=10%, OLD=90%)..."
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions 'Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn="'$NEW_TG_ARN'",Weight=10},{TargetGroupArn="'$OLD_TG_ARN'",Weight=90}]}'
+
+      - name: Wait for Health Check of New Target Group
+        run: |
+          echo "Waiting for healthy status of NEW target group..."
+          for i in {1..10}; do
+            status=$(aws elbv2 describe-target-health \
+              --target-group-arn $NEW_TG_ARN \
+              --query "TargetHealthDescriptions[*].TargetHealth.State" \
+              --output text)
+            echo "Status: $status"
+            if [ "$status" = "healthy" ]; then
+              echo "HEALTHY=1" >> $GITHUB_ENV
+              break
+            fi
+            sleep 10
+          done
+
+      - name: Finalize Traffic Shift or Rollback
+        run: |
+          if [ "$HEALTHY" = "1" ]; then
+            echo "NEW target group is healthy. Shifting 100% traffic..."
+            aws elbv2 modify-listener \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions Type=forward,TargetGroupArn=$NEW_TG_ARN
+          else
+            echo "NEW target group is not healthy. Rolling back..."
+            aws elbv2 modify-listener \
+              --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+              --default-actions Type=forward,TargetGroupArn=$OLD_TG_ARN
+            exit 1
+          fi
+
+      - name: Deregister Old Instance from Previous Target Group
+        run: |
+          aws elbv2 deregister-targets \
+            --target-group-arn $OLD_TG_ARN \
+            --targets Id=$OLD_INSTANCE_ID
+
+      - name: Remove IP from Security Group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_BASTION_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32

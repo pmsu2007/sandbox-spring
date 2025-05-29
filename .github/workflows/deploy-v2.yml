@@ -43,7 +43,7 @@ jobs:
       - name: Add IP to Security Group
         run: |
           aws ec2 authorize-security-group-ingress \
-            --group-id ${{ secrets.AWS_BASTION_SG_ID }} \
+            --group-id ${{ secrets.AWS_SG_ID }} \
             --protocol tcp \
             --port 22 \
             --cidr ${{ steps.ip.outputs.ipv4 }}/32
@@ -77,58 +77,34 @@ jobs:
       - name: Deploy via Bastion
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.BASTION_HOST }}
-          username: ${{ secrets.BASTION_USER }}
+          host: ${{ env.API_HOST }}
+          username: ${{ secrets.API_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/ubuntu/.ssh/app_key.pem
-            chmod 600 /home/ubuntu/.ssh/app_key.pem
-            
             echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/deploy.log
             
-            # Bastion에서도 민감정보 export 시 로그 감춤
             set +x
             export APP_YML_BASE64="${{ secrets.APP_YML_BASE64 }}"
             export ECR_REGISTRY="${{ secrets.ECR_REGISTRY }}"
             export ECR_REPOSITORY="${{ secrets.ECR_REPOSITORY }}"
-            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY }}"
-            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_KEY }}"
-            export AWS_REGION="${{ secrets.AWS_REGION }}"
             export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
             set -x
             
-            ssh -i /home/ubuntu/.ssh/app_key.pem -o StrictHostKeyChecking=no ubuntu@${{ env.API_HOST }} <<EOF
+            aws ecr get-login-password --region $AWS_REGION | \
+            docker login --username AWS --password-stdin $ECR_REGISTRY
             
-              echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/app/deploy.log
+            mkdir -p /home/ubuntu/app/config
+            cd /home/ubuntu/app
             
-              set +x
-              export APP_YML_BASE64="$APP_YML_BASE64"
-              export ECR_REGISTRY="$ECR_REGISTRY"
-              export ECR_REPOSITORY="$ECR_REPOSITORY"
-              export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
-              export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
-              export AWS_REGION="$AWS_REGION"
-              export DOCKER_IMAGE_TAG="$DOCKER_IMAGE_TAG"
-              set -x
+            echo "$APP_YML_BASE64" | base64 -d > config/application.yml
             
-              aws ecr get-login-password --region $AWS_REGION | \
-              docker login --username AWS --password-stdin $ECR_REGISTRY
+            envsubst < docker-compose.template.yml > docker-compose.yml
             
-              mkdir -p /home/ubuntu/app/config
-              cd /home/ubuntu/app
-            
-              echo "$APP_YML_BASE64" | base64 -d > config/application.yml
-            
-              envsubst < docker-compose.template.yml > docker-compose.yml
-            
-              docker compose pull app || true
-              docker compose stop app || true
-              docker compose rm -f app || true
-              docker compose up -d --force-recreate app || exit 1
-            EOF
-          
-            rm -f /home/ubuntu/.ssh/app_key.pem
+            docker compose pull app || true
+            docker compose stop app || true
+            docker compose rm -f app || true
+            docker compose up -d --force-recreate app || exit 1
 
       - name: Register Target to Target Group
         run: |
@@ -184,7 +160,7 @@ jobs:
         if: always()
         run: |
           aws ec2 revoke-security-group-ingress \
-            --group-id ${{ secrets.AWS_BASTION_SG_ID }} \
+            --group-id ${{ secrets.AWS_SG_ID }} \
             --protocol tcp \
             --port 22 \
             --cidr ${{ steps.ip.outputs.ipv4 }}/32
