@@ -22,6 +22,7 @@ public enum AppHttpStatus {
      * 401 : 인증된 사용자가 아님
      */
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
 
     /**
      * 403 : 접근 권한이 없음
