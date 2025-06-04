@@ -40,4 +40,14 @@ public class AuthController {
 
         return ResponseEntity.ok(BaseResponse.success());
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<BaseResponse<Void>> logout(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        authService.logout(request, response);
+
+        return ResponseEntity.ok(BaseResponse.success());
+    }
 }

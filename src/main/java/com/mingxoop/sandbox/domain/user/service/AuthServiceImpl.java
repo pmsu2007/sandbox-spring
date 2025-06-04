@@ -1,8 +1,10 @@
 package com.mingxoop.sandbox.domain.user.service;
 
 import com.mingxoop.sandbox.domain.user.controller.request.UserCreate;
+import com.mingxoop.sandbox.domain.user.repository.AccessTokenBlacklistRepository;
 import com.mingxoop.sandbox.domain.user.repository.RefreshTokenRepository;
 import com.mingxoop.sandbox.domain.user.repository.UserRepository;
+import com.mingxoop.sandbox.domain.user.repository.entity.AccessTokenBlacklistEntity;
 import com.mingxoop.sandbox.domain.user.repository.entity.RefreshTokenEntity;
 import com.mingxoop.sandbox.domain.user.repository.entity.Role;
 import com.mingxoop.sandbox.domain.user.repository.entity.UserEntity;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -39,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
     private final JwtRepository jwtRepository;
     private final AppCookie appCookie;
     private final PasswordEncoder passwordEncoder;
@@ -128,6 +132,75 @@ public class AuthServiceImpl implements AuthService {
                         token.getRefreshToken(),
                         TimeUtils.secondsUntil(token.getRefreshTokenExpiration())
                 )
+        );
+    }
+
+    @Override
+    @Transactional
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        // 1. 토큰 추출
+        String userAccessToken = jwtRepository.resolveAccessToken(request);
+        if (!StringUtils.hasText(userAccessToken)) {
+            throw new ApiException(AppHttpStatus.MISSING_ACCESS_TOKEN);
+        }
+
+        String userRefreshToken = jwtRepository.resolveRefreshToken(request);
+        if (!StringUtils.hasText(userRefreshToken)) {
+            throw new ApiException(AppHttpStatus.MISSING_REFRESH_TOKEN);
+        }
+
+        // 2. 리프레시 토큰 파싱 및 유저 식별
+        Claims refreshClaims = jwtRepository.parseToken(userRefreshToken);
+        Long userId = Long.valueOf(refreshClaims.get("id").toString());
+
+        // 3. User Agent 추출
+        String userAgent = request.getHeader("User-Agent");
+        if (!StringUtils.hasText(userAgent)) {
+            throw new ApiException(AppHttpStatus.MISSING_USER_AGENT);
+        }
+
+        // 4. Refresh Token Reuse 검증
+        RefreshTokenEntity serverRefreshToken = refreshTokenRepository.findValidByUserIdAndUserAgent(userId, userAgent)
+                .orElse(null);
+
+        if (serverRefreshToken != null) {
+            if (!HashingUtils.sha256Base64(userRefreshToken).equals(serverRefreshToken.getToken())) {
+                // 토큰 불일치 시 해당 유저의 리프레시 토큰 전체 삭제
+                log.warn("Refresh Token reuse detected for userId={}, userAgent={}", userId, userAgent);
+                refreshTokenRepository.deleteByUserId(userId);
+                throw new ApiException(AppHttpStatus.REUSE_DETECTED_REFRESH_TOKEN);
+            }
+
+            // 정상 리프레시 토큰일 경우 삭제
+            refreshTokenRepository.deleteById(serverRefreshToken.getId());
+        }
+
+        // 5. 액세스 토큰 무효화
+        Claims accessClaims = jwtRepository.parseToken(userAccessToken);
+        if (!StringUtils.hasText(accessClaims.getId()) || accessClaims.getExpiration() == null) {
+            throw new ApiException(AppHttpStatus.INVALID_TOKEN);
+        }
+
+        String jti = accessClaims.getId();
+        LocalDateTime expiration = accessClaims.getExpiration()
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        accessTokenBlacklistRepository.save(AccessTokenBlacklistEntity.builder()
+                .jti(jti)
+                .expiresAt(expiration)
+                .user(UserEntity.ref(userId))
+                .build());
+
+        // 6. 쿠키 제거
+        response.addHeader(
+                COOKIE_HEADER,
+                appCookie.deleteCookie(AUTHORIZATION_HEADER)
+        );
+        response.addHeader(
+                COOKIE_HEADER,
+                appCookie.deleteCookie(REFRESH_HEADER)
         );
     }
 }

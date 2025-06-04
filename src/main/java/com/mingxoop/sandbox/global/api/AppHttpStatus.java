@@ -17,6 +17,7 @@ public enum AppHttpStatus {
      * 400 : 잘못된 문법으로 인해 요청을 이해할 수 없음
      */
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
+    MISSING_ACCESS_TOKEN(HttpStatus.BAD_REQUEST, "액세스 토큰이 요청에 포함되지 않았습니다."),
     MISSING_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, "리프레시 토큰이 요청에 포함되지 않았습니다."),
     MISSING_USER_AGENT(HttpStatus.BAD_REQUEST, "User-Agent가 요청에 포함되지 않았습니다."),
 

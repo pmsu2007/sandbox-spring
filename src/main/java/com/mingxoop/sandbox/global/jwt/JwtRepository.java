@@ -22,10 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -63,6 +60,7 @@ public class JwtRepository {
 		String accessToken = Jwts.builder()
 			.claims(claims)
 			.subject(user.getEmail())
+			.id(UUID.randomUUID().toString())
 			.expiration(accessTokenExpiration)
 			.issuedAt(issuedAt)
 			.signWith(key)

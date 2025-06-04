@@ -8,4 +8,5 @@ import jakarta.servlet.http.HttpServletResponse;
 public interface AuthService {
     PkResponse signup(UserCreate userCreate);
     void refreshToken(HttpServletRequest request, HttpServletResponse response);
+    void logout(HttpServletRequest request, HttpServletResponse response);
 }
