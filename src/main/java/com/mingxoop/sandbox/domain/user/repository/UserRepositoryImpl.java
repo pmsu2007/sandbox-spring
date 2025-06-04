@@ -14,8 +14,19 @@ public class UserRepositoryImpl implements UserRepository {
 
     private final UserJpaRepository userJpaRepository;
     private final JPAQueryFactory query;
+
+    @Override
+    public UserEntity save(UserEntity userEntity) {
+        return userJpaRepository.save(userEntity);
+    }
+
     @Override
     public Optional<UserEntity> findByEmail(String email) {
         return userJpaRepository.findByEmail(email);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userJpaRepository.existsByEmail(email);
     }
 }

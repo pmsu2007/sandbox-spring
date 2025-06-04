@@ -1,6 +1,7 @@
 package com.mingxoop.sandbox.domain.user.repository.entity;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,6 +34,7 @@ public class UserEntity {
     @Column(name = "modified_at")
     private LocalDateTime modifiedAt;
 
+    @Builder
     public UserEntity(Long id, String email, String password, Role role, LocalDateTime createdAt, LocalDateTime modifiedAt) {
         this.id = id;
         this.email = email;
@@ -45,6 +47,7 @@ public class UserEntity {
     @PrePersist
     private void prePersist() {
         this.createdAt = LocalDateTime.now();
+        this.modifiedAt = LocalDateTime.now();
     }
 
     @PreUpdate

@@ -38,7 +38,8 @@ public enum AppHttpStatus {
     /**
      * 409 : 현재 상태와 충돌되는 요청
      */
-    ALREADY_EXISTS_ALERT(HttpStatus.CONFLICT, "등록할 수 있는 알람의 갯수를 초과했습니다."),
+    CONFLICT(HttpStatus.CONFLICT, "이미 존재하는 리소스입니다."),
+    CONFLICT_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 
     /**
      * 415 : 미디어 타입 에러
