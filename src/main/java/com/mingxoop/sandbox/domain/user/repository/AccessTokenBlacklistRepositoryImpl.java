@@ -17,4 +17,9 @@ public class AccessTokenBlacklistRepositoryImpl implements AccessTokenBlacklistR
     public AccessTokenBlacklistEntity save(AccessTokenBlacklistEntity accessTokenBlacklistEntity) {
         return accessTokenBlacklistJpaRepository.save(accessTokenBlacklistEntity);
     }
+
+    @Override
+    public boolean existsByJti(String jti) {
+        return accessTokenBlacklistJpaRepository.existsByJti(jti);
+    }
 }

@@ -1,5 +1,6 @@
 package com.mingxoop.sandbox.global.config;
 
+import com.mingxoop.sandbox.domain.user.repository.AccessTokenBlacklistRepository;
 import com.mingxoop.sandbox.domain.user.repository.RefreshTokenRepository;
 import com.mingxoop.sandbox.global.api.AppCookie;
 import com.mingxoop.sandbox.global.jwt.JwtAuthenticationFilter;
@@ -32,6 +33,7 @@ public class SecurityConfig {
     private final CorsProperties corsProperties;
     private final JwtRepository jwtRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
     private final AppCookie appCookie;
 
     @Bean
@@ -104,7 +106,8 @@ public class SecurityConfig {
     public JwtVerificationFilter jwtVerificationFilter() throws Exception {
 
         return new JwtVerificationFilter(
-                jwtRepository
+                jwtRepository,
+                accessTokenBlacklistRepository
         );
     }
 }

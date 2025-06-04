@@ -4,4 +4,5 @@ import com.mingxoop.sandbox.domain.user.repository.entity.AccessTokenBlacklistEn
 
 public interface AccessTokenBlacklistRepository {
     AccessTokenBlacklistEntity save(AccessTokenBlacklistEntity accessTokenBlacklistEntity);
+    boolean existsByJti(String jti);
 }
