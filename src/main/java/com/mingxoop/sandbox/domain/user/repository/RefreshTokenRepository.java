@@ -7,5 +7,6 @@ import java.util.Optional;
 public interface RefreshTokenRepository {
     RefreshTokenEntity save(RefreshTokenEntity refreshTokenEntity);
     Optional<RefreshTokenEntity> findValidByUserIdAndUserAgent(Long userId, String userAgent);
-    void delete(RefreshTokenEntity refreshTokenEntity);
+    void deleteById(Long refreshTokenId);
+    void deleteByUserId(Long userId);
 }

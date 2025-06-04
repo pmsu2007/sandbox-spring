@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 		AppUserDetails principal = (AppUserDetails) authResult.getPrincipal();
 
 		// JWT 생성
-		TokenResponse token = jwtRepository.generateToken(principal.getId(), principal.getEmail(), principal.getRole());
+		TokenResponse token = jwtRepository.generateToken(principal);
 
 		// Response Header 설정
 		response.addHeader(
@@ -89,7 +89,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 
 		refreshTokenRepository
 				.findValidByUserIdAndUserAgent(principal.getId(), request.getHeader("User-Agent"))
-				.ifPresent(refreshTokenRepository::delete);
+				.ifPresent(refreshTokenEntity -> refreshTokenRepository.deleteById(refreshTokenEntity.getId()));
 
 		// 로그인 성공 시 Refresh Token 저장
 		RefreshTokenEntity refreshTokenEntity = RefreshTokenEntity.builder()

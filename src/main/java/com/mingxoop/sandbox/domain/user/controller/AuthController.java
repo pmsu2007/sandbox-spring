@@ -4,6 +4,8 @@ import com.mingxoop.sandbox.domain.user.controller.request.UserCreate;
 import com.mingxoop.sandbox.domain.user.service.AuthService;
 import com.mingxoop.sandbox.global.api.BaseResponse;
 import com.mingxoop.sandbox.global.api.PkResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,5 +29,15 @@ public class AuthController {
                         userCreate
                 )
         ));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<BaseResponse<Void>> refreshToken(
+        HttpServletRequest request,
+        HttpServletResponse response
+    ) {
+        authService.refreshToken(request, response);
+
+        return ResponseEntity.ok(BaseResponse.success());
     }
 }

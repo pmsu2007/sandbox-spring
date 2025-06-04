@@ -17,12 +17,16 @@ public enum AppHttpStatus {
      * 400 : 잘못된 문법으로 인해 요청을 이해할 수 없음
      */
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
+    MISSING_REFRESH_TOKEN(HttpStatus.BAD_REQUEST, "리프레시 토큰이 요청에 포함되지 않았습니다."),
+    MISSING_USER_AGENT(HttpStatus.BAD_REQUEST, "User-Agent가 요청에 포함되지 않았습니다."),
 
     /**
      * 401 : 인증된 사용자가 아님
      */
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
+    REUSE_DETECTED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 재사용되었거나 위조되었습니다."),
+    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 만료되었습니다."),
 
     /**
      * 403 : 접근 권한이 없음
@@ -34,6 +38,8 @@ public enum AppHttpStatus {
      */
     NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 리소스입니다."),
     NOT_FOUND_ENDPOINT(HttpStatus.NOT_FOUND, "존재하지 않는 엔드포인트입니다."),
+    NOT_FOUND_USER(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
+    NOT_FOUND_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "존재하지 않는 리프레시 토큰입니다."),
 
     /**
      * 409 : 현재 상태와 충돌되는 요청

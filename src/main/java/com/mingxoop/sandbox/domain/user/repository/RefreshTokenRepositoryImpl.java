@@ -37,7 +37,18 @@ public class RefreshTokenRepositoryImpl implements RefreshTokenRepository {
     }
 
     @Override
-    public void delete(RefreshTokenEntity refreshTokenEntity) {
-        refreshTokenJpaRepository.delete(refreshTokenEntity);
+    public void deleteById(Long refreshTokenId) {
+        query.update(refreshTokenEntity)
+                .set(refreshTokenEntity.isRevoked, true)
+                .where(refreshTokenEntity.id.eq(refreshTokenId))
+                .execute();
+    }
+
+    @Override
+    public void deleteByUserId(Long userId) {
+        query.update(refreshTokenEntity)
+                .set(refreshTokenEntity.isRevoked, true)
+                .where(refreshTokenEntity.user.id.eq(userId))
+                .execute();
     }
 }

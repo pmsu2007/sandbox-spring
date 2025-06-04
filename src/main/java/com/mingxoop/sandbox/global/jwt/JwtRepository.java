@@ -1,6 +1,7 @@
 package com.mingxoop.sandbox.global.jwt;
 
 import com.mingxoop.sandbox.domain.user.repository.entity.Role;
+import com.mingxoop.sandbox.domain.user.repository.entity.UserEntity;
 import com.mingxoop.sandbox.global.api.AppHttpStatus;
 import com.mingxoop.sandbox.global.properties.JwtProperties;
 import com.mingxoop.sandbox.global.security.AppUserDetails;
@@ -53,21 +54,23 @@ public class JwtRepository {
 	}
 
 	// 액세스 토큰, 리프레쉬 토큰 생성
-	public TokenResponse generateToken(Long id, String email, Role role) {
+	public TokenResponse generateToken(UserEntity user) {
 		Date issuedAt = new Date(System.currentTimeMillis());
 		Date accessTokenExpiration = getTokenExpiration(issuedAt, jwtProperties.getAccessExpirationMillis());
 		Date refreshTokenExpiration = getTokenExpiration(issuedAt, jwtProperties.getRefreshExpirationMillis());
 
+		Map<String, String> claims = generatePublicClaims(user.getId(), user.getRole());
 		String accessToken = Jwts.builder()
-			.claims(generatePublicClaims(id, role))
-			.subject(email)
+			.claims(claims)
+			.subject(user.getEmail())
 			.expiration(accessTokenExpiration)
 			.issuedAt(issuedAt)
 			.signWith(key)
 			.compact();
 
 		String refreshToken = Jwts.builder()
-			.subject(email)
+			.claims(claims)
+			.subject(user.getEmail())
 			.expiration(refreshTokenExpiration)
 			.issuedAt(issuedAt)
 			.signWith(key)
