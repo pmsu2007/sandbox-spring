@@ -10,13 +10,13 @@ import org.springframework.stereotype.Component;
 public class AppCookie {
     private final JwtProperties jwtProperties;
 
-    public String createCookie(String key, String value) {
+    public String createCookie(String key, String value, long maxAge) {
         return ResponseCookie.from(key, value)
                 .path(jwtProperties.getCookie().getPath())
                 .sameSite(jwtProperties.getCookie().getSameSite())
                 .httpOnly(jwtProperties.getCookie().isHttpOnly())
                 .secure(jwtProperties.getCookie().isSecure())
-                .maxAge(jwtProperties.getCookie().getMaxAge())
+                .maxAge(maxAge)
                 .build()
                 .toString();
     }

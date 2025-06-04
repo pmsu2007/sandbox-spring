@@ -19,6 +19,8 @@ import org.springframework.util.StringUtils;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -53,30 +55,38 @@ public class JwtRepository {
 	// 액세스 토큰, 리프레쉬 토큰 생성
 	public TokenResponse generateToken(Long id, String email, Role role) {
 		Date issuedAt = new Date(System.currentTimeMillis());
+		Date accessTokenExpiration = getTokenExpiration(issuedAt, jwtProperties.getAccessExpirationMillis());
+		Date refreshTokenExpiration = getTokenExpiration(issuedAt, jwtProperties.getRefreshExpirationMillis());
 
 		String accessToken = Jwts.builder()
 			.claims(generatePublicClaims(id, role))
 			.subject(email)
-			.expiration(getTokenExpiration(jwtProperties.getAccessExpirationMillis()))
+			.expiration(accessTokenExpiration)
 			.issuedAt(issuedAt)
 			.signWith(key)
 			.compact();
 
 		String refreshToken = Jwts.builder()
 			.subject(email)
-			.expiration(getTokenExpiration(jwtProperties.getRefreshExpirationMillis()))
+			.expiration(refreshTokenExpiration)
 			.issuedAt(issuedAt)
 			.signWith(key)
 			.compact();
 
 		return TokenResponse.builder()
 			.accessToken(accessToken)
+			.accessTokenExpiration(toLocalDateTime(accessTokenExpiration))
 			.refreshToken(refreshToken)
+			.refreshTokenExpiration(toLocalDateTime(refreshTokenExpiration))
 			.build();
 	}
 
-	private Date getTokenExpiration(long expirationMillis) {
-		return new Date(new Date().getTime() + expirationMillis);
+	private Date getTokenExpiration(Date issuedAt, long expirationMillis) {
+		return new Date(issuedAt.getTime() + expirationMillis);
+	}
+
+	private LocalDateTime toLocalDateTime(Date date) {
+		return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
 	}
 
 	// 공개 클레임

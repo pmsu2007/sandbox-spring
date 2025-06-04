@@ -26,10 +26,10 @@ public class RefreshTokenEntity {
     @Column(name = "token", nullable = false, length = 255)
     private String token;
 
-    @Column(name = "device_info", nullable = false, length = 255)
-    private String deviceInfo;
+    @Column(name = "user_agent", nullable = false, length = 255)
+    private String userAgent;
 
-    @Column(name = "is_revoked", nullable = false)
+    @Column(name = "is_revoked")
     private Boolean isRevoked = false;
 
     @Column(name = "expires_at", nullable = false)
@@ -46,10 +46,10 @@ public class RefreshTokenEntity {
     private UserEntity user;
 
     @Builder
-    public RefreshTokenEntity(Long id, String token, String deviceInfo, Boolean isRevoked, LocalDateTime expiresAt, LocalDateTime createdAt, LocalDateTime modifiedAt, UserEntity user) {
+    public RefreshTokenEntity(Long id, String token, String userAgent, Boolean isRevoked, LocalDateTime expiresAt, LocalDateTime createdAt, LocalDateTime modifiedAt, UserEntity user) {
         this.id = id;
         this.token = token;
-        this.deviceInfo = deviceInfo;
+        this.userAgent = userAgent;
         this.isRevoked = isRevoked;
         this.expiresAt = expiresAt;
         this.createdAt = createdAt;

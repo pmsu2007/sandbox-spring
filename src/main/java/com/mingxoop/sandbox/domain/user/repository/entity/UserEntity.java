@@ -54,4 +54,10 @@ public class UserEntity {
     private void preUpdate() {
         this.modifiedAt = LocalDateTime.now();
     }
+
+    public static UserEntity ref(Long id) {
+        return UserEntity.builder()
+                .id(id)
+                .build();
+    }
 }

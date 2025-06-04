@@ -26,13 +26,19 @@ public class AppUserDetails extends UserEntity implements UserDetails {
 		this.email = email;
 		this.role = role;
 	}
+	private AppUserDetails(Long id, String email, Role role, String password) {
+		this.id = id;
+		this.email = email;
+		this.role = role;
+		this.password = password;
+	}
 
 	public static AppUserDetails of(Long id, String email, String role) {
 		return new AppUserDetails(id, email, Role.valueOf(role));
 	}
 
 	public static AppUserDetails of(UserEntity user) {
-		return new AppUserDetails(user.getId(), user.getEmail(), user.getRole());
+		return new AppUserDetails(user.getId(), user.getEmail(), user.getRole(), user.getPassword());
 	}
 
 	@Override
@@ -63,5 +69,10 @@ public class AppUserDetails extends UserEntity implements UserDetails {
 	@Override
 	public boolean isEnabled() {
 		return true;
+	}
+
+	@Override
+	public String getPassword() {
+		return this.password;
 	}
 }

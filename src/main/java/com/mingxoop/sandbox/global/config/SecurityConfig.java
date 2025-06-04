@@ -1,5 +1,6 @@
 package com.mingxoop.sandbox.global.config;
 
+import com.mingxoop.sandbox.domain.user.repository.RefreshTokenRepository;
 import com.mingxoop.sandbox.global.api.AppCookie;
 import com.mingxoop.sandbox.global.jwt.JwtAuthenticationFilter;
 import com.mingxoop.sandbox.global.jwt.JwtRepository;
@@ -30,6 +31,7 @@ public class SecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
     private final CorsProperties corsProperties;
     private final JwtRepository jwtRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final AppCookie appCookie;
 
     @Bean
@@ -41,7 +43,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/health", "/error").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                 )
                 .exceptionHandling(exception -> exception
@@ -90,10 +92,11 @@ public class SecurityConfig {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(
                 authenticationManager(authenticationConfiguration),
                 appCookie,
-                jwtRepository
+                jwtRepository,
+                refreshTokenRepository
         );
 
-        filter.setFilterProcessesUrl("/api/auth/login");
+        filter.setFilterProcessesUrl("/api/v1/auth/signin");
 
         return filter;
     }
