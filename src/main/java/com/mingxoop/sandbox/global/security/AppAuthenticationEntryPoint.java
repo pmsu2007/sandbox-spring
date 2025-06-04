@@ -24,7 +24,8 @@ public class AppAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
         throws IOException,ServletException {
-        log.error("AuthenticationEntryPoint Error : {}", authException.getMessage());
+        log.error("AuthenticationEntryPoint Error: {}, URI: {}", authException.getMessage(), request.getRequestURI());
+
         // 인증 실패 시 HTTP 응답 설정
         response.setContentType(("application/json;charset=UTF-8"));
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
