@@ -16,7 +16,8 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<?> exceptionHandler(Exception e) {
-		log.error("500 " + e.getMessage(), e);
+		log.error("[Exception] 500 : {} ", e.getMessage());
+		e.printStackTrace();
 
 		return ResponseEntity
 				.status(500)
@@ -25,7 +26,8 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(RuntimeException.class)
 	public ResponseEntity<BaseResponse<Void>> runtimeExceptionHandler(RuntimeException e) {
-		log.error(500 + " " + e.getMessage());
+		log.error("[RuntimeException] 500 : {} ", e.getMessage());
+		e.printStackTrace();
 
 		return ResponseEntity
 				.status(500)
@@ -33,7 +35,7 @@ public class GlobalExceptionHandler {
 	}
 	@ExceptionHandler(ApiException.class)
 	public ResponseEntity<BaseResponse<Void>> apiExceptionHandler(ApiException e) {
-		log.warn(e.getStatus().getHttpStatus().value() + " " + e.getStatus().getMessage());
+		log.warn("[ApiException] {} : {}", e.getStatus().getHttpStatus().value(), e.getStatus().getMessage());
 
 		return ResponseEntity
 				.status(e.getStatus().getHttpStatus().value())
@@ -42,7 +44,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(ConstraintViolationException.class)
 	public ResponseEntity<BaseResponse<Void>> constraintViolationExceptionHandler(ConstraintViolationException e) {
-		log.warn(400 + " " + e.getMessage());
+		log.warn("[ConstraintViolationException] 400 : {}", e.getMessage());
 
 		return ResponseEntity
 				.status(400)
@@ -51,7 +53,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(NoResourceFoundException.class)
 	public ResponseEntity<BaseResponse<Void>> noHandlerFoundExceptionHandler(NoResourceFoundException e) {
-		log.warn(404 + " " + e.getMessage());
+		log.warn("[NoResourceFoundException] 404 : {}", e.getMessage());
 
 		return ResponseEntity
 				.status(404)
@@ -60,7 +62,7 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(MissingServletRequestParameterException.class)
 	public ResponseEntity<BaseResponse<Void>> missingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
-		log.warn(400 + " " + e.getMessage());
+		log.warn("[MissingServletRequestParameterException] 400 : {}", e.getMessage());
 
 		return ResponseEntity
 				.status(400)
