@@ -7,6 +7,7 @@ import com.mingxoop.sandbox.global.jwt.JwtAuthenticationFilter;
 import com.mingxoop.sandbox.global.jwt.JwtRepository;
 import com.mingxoop.sandbox.global.jwt.JwtVerificationFilter;
 import com.mingxoop.sandbox.global.properties.CorsProperties;
+import com.mingxoop.sandbox.global.properties.SecurityProperties;
 import com.mingxoop.sandbox.global.security.AppAccessDeniedHandler;
 import com.mingxoop.sandbox.global.security.AppAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final CorsProperties corsProperties;
+    private final SecurityProperties securityProperties;
     private final JwtRepository jwtRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
@@ -45,8 +47,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/error").permitAll()
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/test/**").permitAll()
+                        .requestMatchers(securityProperties.getPermitEndpoints().toArray(new String[0])).permitAll()
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint) // 인증 실패 처리
