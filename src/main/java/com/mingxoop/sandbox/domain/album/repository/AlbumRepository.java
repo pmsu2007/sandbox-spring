@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface AlbumRepository {
     List<AlbumQuery> findAllByReviewCountCursorPaging(String cursorId, Long cursorReviewCount, long limit);
+    List<AlbumQuery> findAllByReviewCountOffsetPaging(long offset, long limit);
 }

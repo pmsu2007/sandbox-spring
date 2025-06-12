@@ -24,7 +24,7 @@ public class AlbumRepositoryImpl implements AlbumRepository {
     @Override
     public List<AlbumQuery> findAllByReviewCountCursorPaging(String cursorId, Long cursorReviewCount, long limit) {
         // 앨범 + 앨범 리뷰 통계 페이징
-        List<AlbumQuery> albums = getAlbumWithReviewStats(cursorId, cursorReviewCount, limit);
+        List<AlbumQuery> albums = getAlbumsWithReviewStatsCursorPaging(cursorId, cursorReviewCount, limit);
 
         // 앨범 ID 추출
         List<String> albumIds = albums.stream()
@@ -44,7 +44,29 @@ public class AlbumRepositoryImpl implements AlbumRepository {
                 .toList();
     }
 
-    private List<AlbumQuery> getAlbumWithReviewStats(String cursorId, Long cursorReviewCount, long limit) {
+    @Override
+    public List<AlbumQuery> findAllByReviewCountOffsetPaging(long offset, long limit) {
+        List<AlbumQuery> albums = getAlbumsWithReviewStatsOffsetPaging(offset, limit);
+
+        // 앨범 ID 추출
+        List<String> albumIds = albums.stream()
+                .map(AlbumQuery::getId)
+                .toList();
+
+        // 앨범 아티스트
+        Map<String, List<ArtistQuery>> albumArtistsMap = getAlbumArtists(albumIds);
+        Map<String, List<TrackQuery>> albumTracksMap = getAlbumTracks(albumIds);
+
+        // Join + Transform
+        return albums.stream()
+                .peek(album -> {
+                    album.setArtists(albumArtistsMap.getOrDefault(album.getId(), new ArrayList<>()));
+                    album.setTracks(albumTracksMap.getOrDefault(album.getId(), new ArrayList<>()));
+                })
+                .toList();
+    }
+
+    private List<AlbumQuery> getAlbumsWithReviewStatsCursorPaging(String cursorId, Long cursorReviewCount, long limit) {
         // 앨범 + 앨범 리뷰 통계를 커서 페이지네이션 적용 후 반환
         return query
                 .select(new QAlbumQuery(
@@ -77,6 +99,42 @@ public class AlbumRepositoryImpl implements AlbumRepository {
                 .leftJoin(albumReviewStatsEntity).on(albumReviewStatsEntity.album.eq(albumEntity))
                 .where(cursorCondition(cursorId, cursorReviewCount))
                 .orderBy(albumReviewStatsEntity.totalReviewer.desc(), albumReviewStatsEntity.id.desc())
+                .limit(limit)
+                .fetch();
+    }
+    private List<AlbumQuery> getAlbumsWithReviewStatsOffsetPaging(long offset, long limit) {
+        // 앨범 + 앨범 리뷰 통계를 커서 페이지네이션 적용 후 반환
+        return query
+                .select(new QAlbumQuery(
+                        albumEntity.id,
+                        albumEntity.name,
+                        albumEntity.type,
+                        albumEntity.imageUrl,
+                        albumEntity.releasedAt,
+                        albumEntity.createdAt,
+                        albumEntity.modifiedAt,
+                        new QAlbumReviewStatsQuery(
+                                albumReviewStatsEntity.id,
+                                albumReviewStatsEntity.totalReviewer,
+                                albumReviewStatsEntity.totalScore,
+                                albumReviewStatsEntity.averageScore,
+                                albumReviewStatsEntity.score1Count,
+                                albumReviewStatsEntity.score2Count,
+                                albumReviewStatsEntity.score3Count,
+                                albumReviewStatsEntity.score4Count,
+                                albumReviewStatsEntity.score5Count,
+                                albumReviewStatsEntity.maleCount,
+                                albumReviewStatsEntity.maleTotalScore,
+                                albumReviewStatsEntity.femaleCount,
+                                albumReviewStatsEntity.femaleTotalScore,
+                                albumReviewStatsEntity.createdAt,
+                                albumReviewStatsEntity.modifiedAt
+                        ))
+                )
+                .from(albumEntity)
+                .leftJoin(albumReviewStatsEntity).on(albumReviewStatsEntity.album.eq(albumEntity))
+                .orderBy(albumReviewStatsEntity.totalReviewer.desc(), albumReviewStatsEntity.id.desc())
+                .offset(offset)
                 .limit(limit)
                 .fetch();
     }

@@ -4,6 +4,7 @@ import com.mingxoop.sandbox.domain.album.controller.response.AlbumListResponse;
 import com.mingxoop.sandbox.domain.album.repository.AlbumRepository;
 import com.mingxoop.sandbox.domain.album.repository.query.AlbumQuery;
 import com.mingxoop.sandbox.global.api.response.CursorResponse;
+import com.mingxoop.sandbox.global.api.response.OffsetResponse;
 import com.mingxoop.sandbox.global.util.CursorUtil;
 
 import lombok.Builder;
@@ -24,7 +25,7 @@ public class AlbumServiceImpl implements AlbumService {
 
     @Override
     @Transactional(readOnly = true)
-    public CursorResponse<AlbumListResponse> getAlbumsByReviewCount(String encodedCursor, long limit) {
+    public CursorResponse<AlbumListResponse> getAlbumsByReviewCountWithCursor(String encodedCursor, long limit) {
         Map<String, Object> cursor = encodedCursor != null ? CursorUtil.decode(encodedCursor) : Map.of();
         String albumId = (String) cursor.getOrDefault("albumId", null);
         Long reviewCount = CursorUtil.getAsLong(cursor, "reviewCount");
@@ -40,6 +41,19 @@ public class AlbumServiceImpl implements AlbumService {
         return CursorResponse.of(
                 albums.stream().map(AlbumListResponse::from).toList(),
                 nextCursor,
+                limit
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OffsetResponse<AlbumListResponse> getAlbumsByReviewCountWithOffset(long offset, long limit) {
+
+        List<AlbumQuery> albums = albumRepository.findAllByReviewCountOffsetPaging(offset, limit + 1);
+
+        return OffsetResponse.of(
+                albums.stream().map(AlbumListResponse::from).toList(),
+                offset,
                 limit
         );
     }

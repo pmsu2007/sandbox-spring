@@ -18,20 +18,19 @@ public class OffsetResponse<T> {
     List<T> contents;
     long offset;
     long limit;
-    long totalElements;
     boolean hasNext;
     public static <T> OffsetResponse<T> of(
             List<T> contents,
             long offset,
-            long limit,
-            long totalElements
+            long limit
     ) {
-        boolean hasNext = (offset + limit) < totalElements;
+        boolean hasNext = contents.size() > limit;
+        List<T> pageContents = hasNext ? contents.subList(0, (int) limit) : contents;
+
         return OffsetResponse.<T>builder()
-                .contents(contents)
+                .contents(pageContents)
                 .offset(offset)
                 .limit(limit)
-                .totalElements(totalElements)
                 .hasNext(hasNext)
                 .build();
     }
