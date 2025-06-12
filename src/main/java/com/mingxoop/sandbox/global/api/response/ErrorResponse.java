@@ -1,6 +1,8 @@
-package com.mingxoop.sandbox.global.api;
+package com.mingxoop.sandbox.global.api.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.mingxoop.sandbox.global.api.ApiException;
+import com.mingxoop.sandbox.global.api.AppHttpStatus;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.AccessLevel;

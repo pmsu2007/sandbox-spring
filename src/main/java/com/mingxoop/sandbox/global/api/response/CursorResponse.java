@@ -1,4 +1,4 @@
-package com.mingxoop.sandbox.global.api;
+package com.mingxoop.sandbox.global.api.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AccessLevel;
@@ -14,24 +14,23 @@ import java.util.List;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class OffsetResponse<T> {
+public class CursorResponse<T> {
     List<T> contents;
-    long offset;
+    String nextCursor;
     long limit;
-    long totalElements;
     boolean hasNext;
-    public static <T> OffsetResponse<T> of(
+    public static <T> CursorResponse<T> of(
             List<T> contents,
-            long offset,
-            long limit,
-            long totalElements
+            String nextCursor,
+            long limit
     ) {
-        boolean hasNext = (offset + limit) < totalElements;
-        return OffsetResponse.<T>builder()
-                .contents(contents)
-                .offset(offset)
+        boolean hasNext = contents.size() > limit;
+        List<T> pageContents = hasNext ? contents.subList(0, (int) limit) : contents;
+
+        return CursorResponse.<T>builder()
+                .contents(pageContents)
+                .nextCursor(hasNext ? nextCursor : null)
                 .limit(limit)
-                .totalElements(totalElements)
                 .hasNext(hasNext)
                 .build();
     }

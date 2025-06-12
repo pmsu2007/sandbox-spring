@@ -1,4 +1,4 @@
-package com.mingxoop.sandbox.global.api;
+package com.mingxoop.sandbox.global.api.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AccessLevel;

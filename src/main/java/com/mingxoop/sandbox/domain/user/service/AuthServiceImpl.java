@@ -11,7 +11,7 @@ import com.mingxoop.sandbox.domain.user.repository.entity.UserEntity;
 import com.mingxoop.sandbox.global.api.ApiException;
 import com.mingxoop.sandbox.global.api.AppCookie;
 import com.mingxoop.sandbox.global.api.AppHttpStatus;
-import com.mingxoop.sandbox.global.api.PkResponse;
+import com.mingxoop.sandbox.global.api.response.PkResponse;
 import com.mingxoop.sandbox.global.jwt.JwtRepository;
 import com.mingxoop.sandbox.global.jwt.TokenResponse;
 import com.mingxoop.sandbox.global.util.HashingUtils;

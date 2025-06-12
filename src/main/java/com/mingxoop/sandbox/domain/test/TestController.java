@@ -1,6 +1,6 @@
 package com.mingxoop.sandbox.domain.test;
 
-import com.mingxoop.sandbox.global.api.BaseResponse;
+import com.mingxoop.sandbox.global.api.response.BaseResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

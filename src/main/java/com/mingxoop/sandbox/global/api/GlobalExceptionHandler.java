@@ -1,5 +1,7 @@
 package com.mingxoop.sandbox.global.api;
 
+import com.mingxoop.sandbox.global.api.response.BaseResponse;
+import com.mingxoop.sandbox.global.api.response.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

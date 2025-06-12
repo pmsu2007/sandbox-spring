@@ -2,8 +2,8 @@ package com.mingxoop.sandbox.global.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mingxoop.sandbox.global.api.AppHttpStatus;
-import com.mingxoop.sandbox.global.api.BaseResponse;
-import com.mingxoop.sandbox.global.api.ErrorResponse;
+import com.mingxoop.sandbox.global.api.response.BaseResponse;
+import com.mingxoop.sandbox.global.api.response.ErrorResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
