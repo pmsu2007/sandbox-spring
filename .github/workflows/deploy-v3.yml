@@ -1,0 +1,93 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.DOCKER_IMAGE_TAG }} .
+
+      - name: Push Docker Image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ env.DOCKER_IMAGE_TAG }}
+
+      - name: Get GitHub Actions IP
+        id: ip
+        uses: haythem/public-ip@v1.2
+
+      - name: Add IP to Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+      - name: Deploy via Bastion
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.API_HOST }}
+          username: ${{ secrets.API_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "Deployed at $(date '+%Y-%m-%d %H:%M:%S %Z')" >> /home/ubuntu/deploy.log
+            
+            set +x
+            export APP_YML_BASE64="${{ secrets.APP_YML_BASE64 }}"
+            export ECR_REGISTRY="${{ secrets.ECR_REGISTRY }}"
+            export ECR_REPOSITORY="${{ secrets.ECR_REPOSITORY }}"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_KEY }}"
+            export AWS_REGION="${{ secrets.AWS_REGION }}"
+            export DOCKER_IMAGE_TAG="${{ env.DOCKER_IMAGE_TAG }}"
+            set -x
+            
+            aws ecr get-login-password --region $AWS_REGION | \
+            docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            mkdir -p /home/ubuntu/app/config
+            cd /home/ubuntu/app
+            
+            echo "$APP_YML_BASE64" | base64 -d > config/application.yml
+            
+            envsubst < docker-compose.template.yml > docker-compose.yml
+            
+            docker compose pull app || true
+            docker compose stop app || true
+            docker compose rm -f app || true
+            docker compose up -d --force-recreate app || exit 1
+
+      - name: Remove IP from Security Group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
