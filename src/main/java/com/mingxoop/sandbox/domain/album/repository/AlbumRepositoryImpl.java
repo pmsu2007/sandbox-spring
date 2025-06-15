@@ -95,8 +95,8 @@ public class AlbumRepositoryImpl implements AlbumRepository {
                                 albumReviewStatsEntity.modifiedAt
                         ))
                 )
-                .from(albumEntity)
-                .leftJoin(albumReviewStatsEntity).on(albumReviewStatsEntity.album.eq(albumEntity))
+                .from(albumReviewStatsEntity)
+                .leftJoin(albumEntity).on(albumEntity.id.eq(albumReviewStatsEntity.id))
                 .where(cursorCondition(cursorId, cursorReviewCount))
                 .orderBy(albumReviewStatsEntity.totalReviewer.desc(), albumReviewStatsEntity.id.desc())
                 .limit(limit)
@@ -131,8 +131,8 @@ public class AlbumRepositoryImpl implements AlbumRepository {
                                 albumReviewStatsEntity.modifiedAt
                         ))
                 )
-                .from(albumEntity)
-                .leftJoin(albumReviewStatsEntity).on(albumReviewStatsEntity.album.eq(albumEntity))
+                .from(albumReviewStatsEntity)
+                .leftJoin(albumEntity).on(albumEntity.id.eq(albumReviewStatsEntity.id))
                 .orderBy(albumReviewStatsEntity.totalReviewer.desc(), albumReviewStatsEntity.id.desc())
                 .offset(offset)
                 .limit(limit)
